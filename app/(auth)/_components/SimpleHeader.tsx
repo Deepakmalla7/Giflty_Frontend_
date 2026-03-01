@@ -24,8 +24,8 @@ export default function SimpleHeader({ onLoginClick, onSignupClick }: SimpleHead
           {/* LEFT – LOGO */}
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-pink-500">Giftly</span>
-              <span className="text-xl">🎁</span>
+              <span className="text-2xl font-bold text-pink-500">Giftly ❤️</span>
+              <span className="text-xl"></span>
             </Link>
           </div>
 
