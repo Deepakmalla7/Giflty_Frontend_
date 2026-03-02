@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const ADMIN_EMAIL = "admin@admin.com";
-const ADMIN_PASSWORD = "admin123";
+import { adminLogin } from "@/lib/api/admin-gift.api";
 
 export default function AdminLogin() {
     const [email, setEmail] = useState("");
@@ -18,19 +16,32 @@ export default function AdminLogin() {
         setError("");
         setLoading(true);
 
-        // Check credentials
-        if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-            // Store admin session
-            localStorage.setItem("adminAuthenticated", "true");
-            localStorage.setItem("adminEmail", email);
-            
-            // Redirect to admin dashboard
-            router.push("/admin/dashboard");
-        } else {
-            setError("Invalid admin credentials");
+        try {
+            const result = await adminLogin(email, password);
+
+            if (result.success && result.token) {
+                // Verify the user has admin role
+                const user = result.newUser;
+                if (user?.role !== "admin") {
+                    setError("You do not have admin privileges");
+                    setLoading(false);
+                    return;
+                }
+
+                // Store admin session info
+                localStorage.setItem("adminAuthenticated", "true");
+                localStorage.setItem("adminEmail", email);
+                localStorage.setItem("adminToken", result.token);
+
+                router.push("/admin/dashboard");
+            } else {
+                setError(result.message || "Login failed");
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err.message || "Invalid credentials");
+        } finally {
+            setLoading(false);
         }
-        
-        setLoading(false);
     };
 
     return (
