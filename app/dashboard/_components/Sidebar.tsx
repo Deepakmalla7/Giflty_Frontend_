@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import logo from "@/app/assets/images/logo.png";
 
 const menuItems = [
   {
@@ -12,6 +14,11 @@ const menuItems = [
   },
   {
     icon: "🎁",
+    label: "Browse Gifts",
+    href: "/dashboard/gifts",
+  },
+  {
+    icon: "💌",
     label: "Send Gift",
     href: "/dashboard/gift",
   },
@@ -21,19 +28,14 @@ const menuItems = [
     href: "/dashboard/orders",
   },
   {
-    icon: "👥",
-    label: "Customers",
-    href: "/dashboard/customers",
-  },
-  {
-    icon: "📋",
-    label: "Manage Menu",
-    href: "/dashboard/menu",
+    icon: "❤️",
+    label: "Wishlist",
+    href: "/dashboard/wishlist",
   },
   {
     icon: "⭐",
-    label: "Customer Review",
-    href: "/dashboard/reviews",
+    label: "My Reviews",
+    href: "/dashboard/feedback",
   },
 ];
 
@@ -100,8 +102,15 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-6 border-b border-emerald-600">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-700 font-bold">
-              G
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <Image
+                src={logo}
+                alt="Giftly logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                priority
+              />
             </div>
             <span className="text-xl font-bold">GIFTLY</span>
           </Link>
