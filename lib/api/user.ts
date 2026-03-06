@@ -29,3 +29,17 @@ export const deleteUserPhoto = async (payload: {
     throw new Error(err.response?.data?.message || err.message || "Delete failed");
   }
 };
+
+export const updateUserProfile = async (userId: string, payload: {
+  email?: string;
+  username?: string;
+  accountStatus?: "active" | "inactive";
+}) => {
+  try {
+    const response = await axios.put(`${API.USER.UPDATE_PROFILE}/${userId}`, payload);
+    return response.data;
+  } catch (err: any) {
+    console.error("Update user profile error:", err);
+    throw new Error(err.response?.data?.message || err.message || "Update failed");
+  }
+};
