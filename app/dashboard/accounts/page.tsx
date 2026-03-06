@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getCookieUserData } from "@/lib/actions/user-action";
 import { deleteUserPhotoAction, uploadUserPhotoAction } from "@/lib/actions/user-photo-action";
 import { deleteUserAccountAction } from "@/lib/actions/user-delete-action";
+import { updateUserProfileAction } from "@/lib/actions/user-update-action";
 
 interface UserData {
   id: string;
@@ -15,6 +16,7 @@ interface UserData {
   age?: number;
   gender?: string;
   profilePicture?: string;
+  accountStatus?: "active" | "inactive";
 }
 
 const getCookieValue = (name: string) => {
@@ -44,6 +46,11 @@ export default function AccountsPage() {
   const [error, setError] = useState<string | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -78,6 +85,9 @@ export default function AccountsPage() {
             profilePicture: normalizedProfile
           };
           setUserData(normalizedUser);
+          setEditEmail(normalizedUser.email || "");
+          setEditUsername(normalizedUser.username || "");
+          setEditStatus(normalizedUser.accountStatus || "active");
           if (normalizedProfile && response.data.profilePicture !== normalizedProfile) {
             await updateSessionCookie(normalizedUser);
           }
@@ -94,6 +104,53 @@ export default function AccountsPage() {
 
     fetchUserData();
   }, [uploadMessage]);
+
+  const handleProfileSave = async () => {
+    if (!userData?.id) {
+      setError("User ID not found. Please log in again.");
+      return;
+    }
+
+    if (!editEmail || !editUsername) {
+      setError("Email and username are required.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage("Saving...");
+
+    try {
+      const result = await updateUserProfileAction(userData.id, {
+        email: editEmail,
+        username: editUsername,
+        accountStatus: editStatus
+      });
+
+      if (!result.success) {
+        setError(result.message || "Failed to update profile.");
+        setSaveMessage(null);
+        setIsSaving(false);
+        return;
+      }
+
+      const updatedUser = {
+        ...userData,
+        email: editEmail,
+        username: editUsername,
+        accountStatus: editStatus
+      };
+
+      setUserData(updatedUser);
+      await updateSessionCookie(updatedUser);
+      setSaveMessage("Profile updated successfully!");
+      setTimeout(() => setSaveMessage(null), 2000);
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile.");
+      setSaveMessage(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handlePhotoUpload = async (file: File) => {
     if (!file) {
@@ -114,40 +171,52 @@ export default function AccountsPage() {
       formData.append("userId", userData.id);
 
       const actionResult = await uploadUserPhotoAction(formData);
+      console.log('Upload result:', actionResult);
+      
       if (!actionResult.success) {
         setUploadMessage(actionResult.message || "Failed to upload photo.");
         setTimeout(() => setUploadMessage(null), 3000);
         return;
       }
 
-      setUploadMessage(actionResult.message || "Photo uploaded successfully!");
-      setTimeout(() => setUploadMessage(null), 2000);
-      setPhoto(null);
+      // Get the photo URL from response - check multiple possible locations
+      let photoUrl = actionResult.data?.url || 
+                     actionResult.data?.data?.profilePicture ||
+                     actionResult.data?.data?.url;
       
-      if (actionResult.data?.path || actionResult.data?.data?.profilePicture) {
-        const normalizedPath = normalizeProfilePicture(
-          actionResult.data?.path || actionResult.data?.data?.profilePicture
-        );
-        setUserData((prev) =>
-          prev
-            ? {
-                ...prev,
-                profilePicture: normalizedPath
-              }
-            : prev
-        );
-        if (userData) {
-          await updateSessionCookie({
-            ...userData,
-            profilePicture: normalizedPath
-          });
-        }
+      console.log('Photo URL from response:', photoUrl);
+      
+      if (!photoUrl) {
+        console.error('Response data:', actionResult.data);
+        setUploadMessage("Photo uploaded but could not retrieve URL.");
+        setTimeout(() => setUploadMessage(null), 3000);
+        return;
       }
 
-      const userDataResponse = await getCookieUserData();
-      if (userDataResponse.success && userDataResponse.data) {
-        setUserData(userDataResponse.data);
-      }
+      // Normalize and update state immediately
+      const normalizedPath = normalizeProfilePicture(photoUrl);
+      console.log('Normalized path:', normalizedPath);
+      
+      setUserData((prev) =>
+        prev
+          ? {
+              ...prev,
+              profilePicture: normalizedPath
+            }
+          : prev
+      );
+
+      // Update session cookie with new data
+      const updatedUserData = {
+        ...userData,
+        profilePicture: normalizedPath
+      };
+      
+      await updateSessionCookie(updatedUserData);
+
+      setUploadMessage("Photo uploaded successfully!");
+      setTimeout(() => setUploadMessage(null), 2000);
+      setPhoto(null);
     } catch (error: any) {
       console.error('Photo upload error:', error);
       setUploadMessage(error.message || "Failed to upload photo.");
@@ -273,7 +342,8 @@ export default function AccountsPage() {
             {/* Profile Image or Initial */}
             {userData?.profilePicture ? (
               <img
-                src={normalizeProfilePicture(userData.profilePicture)}
+                key={userData.profilePicture}
+                src={`${normalizeProfilePicture(userData.profilePicture)}?t=${Date.now()}`}
                 alt="Profile Picture"
                 className="w-full h-full rounded-lg object-cover border-4 border-emerald-600"
               />
@@ -325,7 +395,6 @@ export default function AccountsPage() {
                 Remove Photo
               </button>
             )}
-            //
           </div>
 
           {/* User Information */}
@@ -338,17 +407,23 @@ export default function AccountsPage() {
                 <label className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                   Email Address
                 </label>
-                <p className="text-lg text-gray-900 dark:text-white mt-1">
-                  {userData?.email}
-                </p>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="mt-2 w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                   Username
                 </label>
-                <p className="text-lg text-gray-900 dark:text-white mt-1">
-                  {userData?.username}
-                </p>
+                <input
+                  type="text"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  className="mt-2 w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
               {userData?.age && (
                 <div>
@@ -374,9 +449,44 @@ export default function AccountsPage() {
                 <label className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                   Account Status
                 </label>
-                <p className="text-lg text-emerald-600 font-semibold mt-1">
-                  ✓ Active
-                </p>
+                <div className="mt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditStatus("active")}
+                    className={`px-4 py-2 rounded-lg font-semibold transition ${
+                      editStatus === "active"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditStatus("inactive")}
+                    className={`px-4 py-2 rounded-lg font-semibold transition ${
+                      editStatus === "inactive"
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Inactive
+                  </button>
+                </div>
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={handleProfileSave}
+                  disabled={isSaving}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg transition disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+                {saveMessage && (
+                  <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
+                    {saveMessage}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -385,57 +495,6 @@ export default function AccountsPage() {
 
       {/* Account Settings Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Change Password */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Security
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Update your password to keep your account secure.
-          </p>
-          <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-            Change Password
-          </button>
-        </div>
-
-        {/* Privacy Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Privacy
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Manage your privacy settings and preferences.
-          </p>
-          <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-            Manage Privacy
-          </button>
-        </div>
-
-        {/* Two-Factor Authentication */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Two-Factor Authentication
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Add an extra layer of security to your account.
-          </p>
-          <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-            Enable 2FA
-          </button>
-        </div>
-
-        {/* Connected Devices */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Connected Devices
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            View and manage devices connected to your account.
-          </p>
-          <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-            View Devices
-          </button>
-        </div>
       </div>
 
       {/* Danger Zone */}

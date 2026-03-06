@@ -1,16 +1,52 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { getGiftRecommendations } from "@/lib/api/gift";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import watchTwo from "@/app/assets/watch (2).png";
+import flowers from "@/app/assets/images/flowers.png";
+import perfurm from "@/app/assets/images/perfurm.png";
+import boot from "@/app/assets/images/boot.png";
+import wallet from "@/app/assets/images/wallet.png";
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [event, setEvent] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [recommendedItems, setRecommendedItems] = useState<
+    { id?: string; name: string; image: any; isBackendImage?: boolean; price?: number; category?: string; description?: string }[]
+  >([]);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+
+  const giftItems = [
+    { name: "Watch", image: watchTwo },
+    { name: "Flowers", image: flowers },
+    { name: "Perfume", image: perfurm },
+    { name: "Boots", image: boot },
+    { name: "Wallet", image: wallet },
+  ];
+
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, []);
+
+  const pickLocalImage = (name: string) => {
+    const normalized = name.toLowerCase();
+    if (normalized.includes("watch")) return watchTwo;
+    if (normalized.includes("flower")) return flowers;
+    if (normalized.includes("perfume") || normalized.includes("fragrance")) return perfurm;
+    if (normalized.includes("boot")) return boot;
+    if (normalized.includes("wallet")) return wallet;
+    return watchTwo;
+  };
 
   const handleGetRecommendations = async () => {
     setError("");
@@ -21,18 +57,81 @@ export default function DashboardPage() {
     }
 
     setIsLoading(true);
-    try {
-      const result = await getGiftRecommendations(parseInt(age), event, gender);
+    setRecommendedItems([]);
 
-      if (result.success) {
-        localStorage.setItem("giftPreferences", JSON.stringify({ age: parseInt(age), event, gender }));
-        localStorage.setItem("giftRecommendations", JSON.stringify(result.data));
-        router.push("/dashboard/recommendations");
-      } else {
-        setError(result.message || "Failed to get recommendations");
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const params = new URLSearchParams({
+        age,
+        event,
+        gender
+      });
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/gifts/recommendations?${params.toString()}`,
+        { signal: controller.signal }
+      );
+
+      console.log("API Response Status:", response);
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.message || "Failed to fetch recommendations");
       }
+
+      const payload = await response.json();
+      const items = Array.isArray(payload?.data) ? payload.data : [];
+
+      // Map items: prefer backend imageUrl, fallback to local images if not available
+      const mappedItems = items.map((item: { name?: string; imageUrl?: string; price?: number; category?: string; description?: string; _id?: string }) => {
+        const name = item?.name || "Gift";
+        let imageUrl = item?.imageUrl;
+        
+        // If backend provides a relative imageUrl, prepend the API base URL
+        if (imageUrl && !imageUrl.startsWith("http")) {
+          imageUrl = `${API_BASE_URL}${imageUrl}`;
+        }
+
+        // If backend provides imageUrl (from MongoDB), use it directly
+        if (imageUrl) {
+          return {
+            id: item._id,
+            name,
+            image: imageUrl,
+            isBackendImage: true,
+            price: item.price,
+            category: item.category,
+            description: item.description,
+          };
+        }
+        
+        // Fallback to local image mapping
+        return {
+          id: item._id,
+          name,
+          image: pickLocalImage(name),
+          isBackendImage: false,
+          price: item.price,
+          category: item.category,
+          description: item.description,
+        };
+      });
+
+      localStorage.setItem(
+        "giftPreferences",
+        JSON.stringify({ age: parseInt(age, 10), event, gender })
+      );
+      setRecommendedItems(mappedItems.length > 0 ? mappedItems : giftItems);
     } catch (err: any) {
-      setError(err.message || "Failed to get recommendations");
+      if (err?.name !== "AbortError") {
+        setError(err?.message || "Failed to fetch recommendations");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -79,6 +178,10 @@ export default function DashboardPage() {
             <option value="birthday">Birthday</option>
             <option value="anniversary">Anniversary</option>
             <option value="wedding">Wedding</option>
+            <option value="christmas">Christmas</option>
+            <option value="valentine">Valentine&apos;s Day</option>
+            <option value="graduation">Graduation</option>
+            <option value="other">Other</option>
           </select>
         </div>
 
@@ -125,7 +228,7 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <span>🎁</span>
+                <span></span>
                 <span>Get Recommendations</span>
               </>
             )}
@@ -133,17 +236,63 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center"
-            >
-              <div className="text-center">
-                <div className="text-5xl mb-2">🎁</div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Select options above</p>
-              </div>
+          {isLoading && (
+            <div className="col-span-full text-center text-gray-500 dark:text-gray-400">
+              Loading recommendations...
             </div>
-          ))}
+          )}
+
+          {!isLoading && recommendedItems.length === 0 && (
+            <div className="col-span-full text-center text-gray-500 dark:text-gray-400">
+              Select options above, then click Get Recommendations
+            </div>
+          )}
+
+          {!isLoading &&
+            recommendedItems.map((item) => (
+              <div
+                key={item.id || item.name}
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden flex flex-col"
+              >
+                <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-700">
+                  {item.isBackendImage ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-contain"
+                      sizes="(min-width: 768px) 33vw, 100vw"
+                    />
+                  )}
+                </div>
+                <div className="p-4 flex flex-col flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">
+                    {item.name}
+                  </h3>
+                  {item.category && (
+                    <span className="inline-block self-start px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200 mb-2 capitalize">
+                      {item.category}
+                    </span>
+                  )}
+                  {item.description && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2 flex-1">
+                      {item.description}
+                    </p>
+                  )}
+                  {item.price !== undefined && (
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                      ${item.price.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
         </div>
 
         <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
