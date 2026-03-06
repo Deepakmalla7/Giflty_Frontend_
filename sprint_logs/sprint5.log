@@ -1,0 +1,20 @@
+[2026-03-01T09:15:00+05:45] sprint5 commit 1: feat(auth): improve auth layout header components
+[2026-03-01T10:45:00+05:45] sprint5 commit 2: feat(auth): enhance login form validation and styling
+[2026-03-01T12:20:00+05:45] sprint5 commit 3: feat(auth): update register form with enhanced fields
+[2026-03-01T14:35:00+05:45] sprint5 commit 4: feat(auth): add forgot password form component
+[2026-03-01T16:10:00+05:45] sprint5 commit 5: feat(auth): add forgot password API route
+[2026-03-02T09:05:00+05:45] sprint5 commit 6: feat(auth): add reset password form and page
+[2026-03-02T10:50:00+05:45] sprint5 commit 7: feat(auth): add reset password and OTP verification APIs
+[2026-03-02T12:25:00+05:45] sprint5 commit 8: feat(admin): improve admin layout and dashboard page
+[2026-03-02T14:40:00+05:45] sprint5 commit 9: feat(admin): enhance admin login page
+[2026-03-02T16:15:00+05:45] sprint5 commit 10: feat(admin): add admin user list page with filters
+[2026-03-03T09:20:00+05:45] sprint5 commit 11: feat(admin): add admin user detail view page
+[2026-03-03T11:05:00+05:45] sprint5 commit 12: feat(admin): add admin user edit functionality
+[2026-03-03T12:50:00+05:45] sprint5 commit 13: feat(admin): add admin user create page
+[2026-03-03T14:30:00+05:45] sprint5 commit 14: feat(admin): add admin categories management module
+[2026-03-03T16:10:00+05:45] sprint5 commit 15: feat(admin): add admin gifts management with API
+[2026-03-03T18:00:00+05:45] sprint5 commit 16: feat(admin): add admin reviews management with API
+[2026-03-04T09:30:00+05:45] sprint5 commit 17: feat(dashboard): improve sidebar and main dashboard page
+[2026-03-04T11:40:00+05:45] sprint5 commit 18: feat(dashboard): add gifts and wishlist features
+[2026-03-04T14:20:00+05:45] sprint5 commit 19: feat(dashboard): add feedback, recommendations and settings
+[2026-03-04T20:15:00+05:45] sprint5 commit 20: feat(ui): add assets theme provider toast and finalize sprint5

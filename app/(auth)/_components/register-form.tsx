@@ -4,9 +4,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RegisterData, registerSchema } from "../schema";
 import { useState } from "react";
-import { handleRegister } from "@/lib/actions/auth-action";
 import { useRouter } from "next/navigation";
-import { UserPlus, Eye, EyeOff, Mail, User, Lock, CheckCircle2 } from "lucide-react";
+import {
+  UserPlus,
+  Eye,
+  EyeOff,
+  Mail,
+  User,
+  Lock,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -28,15 +36,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
 
   const submit = async (values: RegisterData) => {
-    console.log("Form submitted with values:", values);
     setError("");
     setSuccessMessage("");
-
-    // Validation checks
-    if (!values.firstName || !values.lastName || !values.username || !values.email || !values.password || !values.confirmPassword) {
-      setError("All fields are required. Please fill in all fields.");
-      return;
-    }
 
     if (values.password !== values.confirmPassword) {
       setError("Passwords do not match.");
@@ -44,262 +45,204 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
 
     try {
-      console.log("Calling registration API...");
-      
-      // Call the API route
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: values.firstName,
-          lastName: values.lastName,
-          username: values.username,
-          email: values.email,
-          password: values.password,
-          confirmPassword: values.confirmPassword,
-        }),
-        credentials: 'include'
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(values),
       });
 
       const result = await response.json();
-      console.log("Registration response:", result);
 
       if (!result.success) {
-        setError(result.message || "Registration failed. Please try again.");
+        setError(result.message || "Registration failed.");
         return;
       }
 
-      setSuccessMessage("Account created successfully! Redirecting to login...");
-      
-      // Wait for user to see success message before redirecting
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        // Redirect to login
-        window.location.href = "/login";
-      }
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      setError(error.message || "Registration failed. Please try again.");
+      setSuccessMessage("Account created successfully! Redirecting...");
+      setTimeout(() => {
+        onSuccess ? onSuccess() : router.push("/login");
+      }, 1500);
+    } catch {
+      setError("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 mb-4 shadow-lg">
-          <UserPlus className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-2">
-          Create Account
-        </h1>
-        <p className="text-gray-500">Join us and get started today</p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12
+    bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
 
-      {/* Form Card */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-        <form onSubmit={handleSubmit(submit)} className="space-y-4" method="POST">
-          {error && (
-            <div className="rounded-lg bg-red-50 p-4 border border-red-200 animate-shake">
-              <p className="text-sm text-red-700 font-medium">{error}</p>
-            </div>
-          )}
-          {successMessage && (
-            <div className="rounded-lg bg-green-50 p-4 border border-green-200">
-              <p className="text-sm text-green-700 font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                {successMessage}
-              </p>
-            </div>
-          )}
+      <div className="w-full max-w-md">
 
-          {/* Name Row */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* First Name */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                First Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  placeholder="John"
-                  {...register("firstName")}
-                  required
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-                />
-              </div>
-              {errors.firstName && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.firstName.message}</p>
-              )}
-            </div>
-
-            {/* Last Name */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Last Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  placeholder="Doe"
-                  {...register("lastName")}
-                  required
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-                />
-              </div>
-              {errors.lastName && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.lastName.message}</p>
-              )}
-            </div>
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <UserPlus className="h-7 w-7 text-rose-600" />
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Giftly
+            </h1>
           </div>
-
-          {/* Username */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Username
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                placeholder="johndoe"
-                {...register("username")}
-                required
-                minLength={3}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-              />
-            </div>
-            {errors.username && (
-              <p className="mt-1 text-xs text-red-500 font-medium">{errors.username.message}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                {...register("email")}
-                required
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-              />
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-500 font-medium">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Create a password"
-                {...register("password")}
-                required
-                minLength={3}
-                className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="mt-1 text-xs text-red-500 font-medium">{errors.password.message}</p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm your password"
-                {...register("confirmPassword")}
-                required
-                minLength={3}
-                className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-100 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <p className="mt-1 text-xs text-red-500 font-medium">
-                {errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 mt-6"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating Account...
-              </span>
-            ) : (
-              "Create Account"
-            )}
-          </button>
-
-          {/* Login Link */}
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="font-semibold text-pink-500 hover:text-pink-600 transition-colors"
-            >
-              Sign in
-            </a>
+          <p className="text-slate-600 text-sm">
+            Create your account and start sharing joy 
           </p>
-        </form>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl
+        shadow-xl border border-white/40 p-8">
+
+          <form onSubmit={handleSubmit(submit)} className="space-y-5">
+
+            {/* Error */}
+            {error && (
+              <div className="rounded-xl bg-red-50 p-4 border border-red-200 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
+            {/* Success */}
+            {successMessage && (
+              <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200 flex gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
+                <p className="text-sm text-emerald-800">{successMessage}</p>
+              </div>
+            )}
+
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-4">
+              {["firstName", "lastName"].map((field, i) => (
+                <div key={i}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {field === "firstName" ? "First name" : "Last name"}
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      {...register(field as "firstName" | "lastName")}
+                      className="w-full pl-10 py-2.5 rounded-lg border border-slate-300
+                      focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+                    />
+                  </div>
+                  {errors[field as keyof RegisterData] && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors[field as keyof RegisterData]?.message}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Username */}
+            <Input
+              label="Username"
+              icon={<User />}
+              register={register("username")}
+              error={errors.username?.message}
+            />
+
+            {/* Email */}
+            <Input
+              label="Email address"
+              type="email"
+              icon={<Mail />}
+              register={register("email")}
+              error={errors.email?.message}
+            />
+
+            {/* Password */}
+            <PasswordInput
+              label="Password"
+              show={showPassword}
+              toggle={() => setShowPassword(!showPassword)}
+              register={register("password")}
+              error={errors.password?.message}
+            />
+
+            {/* Confirm Password */}
+            <PasswordInput
+              label="Confirm password"
+              show={showConfirmPassword}
+              toggle={() => setShowConfirmPassword(!showConfirmPassword)}
+              register={register("confirmPassword")}
+              error={errors.confirmPassword?.message}
+            />
+
+            {/* Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3 rounded-xl text-white font-semibold
+              bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500
+              hover:opacity-90 hover:scale-[1.01]
+              focus:ring-4 focus:ring-rose-200
+              transition-all disabled:opacity-60"
+            >
+              {isSubmitting ? "Creating account..." : "Create account"}
+            </button>
+
+            {/* Login */}
+            <p className="text-center text-sm text-slate-600 pt-4 border-t">
+              Already have an account?{" "}
+              <a href="/login" className="font-semibold text-rose-600 hover:text-rose-500">
+                Sign in
+              </a>
+            </p>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-slate-500 mt-6">
+          © 2026 Giftly · Crafted with 
+        </p>
       </div>
+    </div>
+  );
+}
+
+/* ---------------- Reusable Components ---------------- */
+
+function Input({ label, icon, register, error, type = "text" }: any) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          {icon}
+        </span>
+        <input
+          type={type}
+          {...register}
+          className="w-full pl-10 py-2.5 rounded-lg border border-slate-300
+          focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+        />
+      </div>
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function PasswordInput({ label, show, toggle, register, error }: any) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+      <div className="relative">
+        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <input
+          type={show ? "text" : "password"}
+          {...register}
+          className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-300
+          focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+        />
+        <button
+          type="button"
+          onClick={toggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2
+          text-slate-400 hover:text-rose-500 transition"
+        >
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
     </div>
   );
 }

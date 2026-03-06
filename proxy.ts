@@ -10,6 +10,11 @@ export function proxy(request: NextRequest) {
   const isDashboardPath = path.startsWith("/dashboard");
   const isAuthPath = path.startsWith("/login") || path.startsWith("/register");
 
+  // Admin auth is handled client-side via localStorage, so skip middleware guards.
+  if (isAdminPath) {
+    return NextResponse.next();
+  }
+
   // Get tokens from cookies
   const authToken = request.cookies.get("auth_token")?.value;
   const sessionData = request.cookies.get("session_data")?.value;
@@ -26,13 +31,8 @@ export function proxy(request: NextRequest) {
   }
 
   // Redirect to login if not authenticated and trying to access protected routes
-  if ((isAdminPath || isUserPath || isDashboardPath) && !authToken) {
+  if ((isUserPath || isDashboardPath) && !authToken) {
     return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Check if user has admin role for admin paths
-  if (isAdminPath && userRole !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // Redirect authenticated users away from auth pages

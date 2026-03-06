@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
@@ -32,50 +31,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // If registration successful and token provided, set cookies (auto-login)
-        if (token && newUser) {
-            console.log('Setting cookies for newly registered user:', newUser.email);
-            
-            const cookieStore = await cookies();
-            const maxAge = 60 * 60 * 24; // 1 day
-            
-            cookieStore.set({
-                name: 'auth_token',
-                value: token,
-                maxAge,
-                path: '/',
-                sameSite: 'lax',
-                httpOnly: false,
-                secure: process.env.NODE_ENV === 'production'
-            });
-
-            cookieStore.set({
-                name: 'user_data',
-                value: JSON.stringify(newUser),
-                maxAge,
-                path: '/',
-                sameSite: 'lax',
-                httpOnly: false,
-                secure: process.env.NODE_ENV === 'production'
-            });
-
-            cookieStore.set({
-                name: 'session_data',
-                value: JSON.stringify({ role: newUser.role || 'user', userId: newUser.id }),
-                maxAge,
-                path: '/',
-                sameSite: 'lax',
-                httpOnly: false,
-                secure: process.env.NODE_ENV === 'production'
-            });
-
-            console.log('Cookies set successfully for new user');
-        }
-
+        // Don't set cookies on registration — user should log in manually
         return NextResponse.json({ 
             success: true, 
-            message: message || 'Registration successful',
-            data: { newUser, token }
+            message: message || 'Registration successful'
         });
     } catch (error: any) {
         console.error('Register API error:', error);
