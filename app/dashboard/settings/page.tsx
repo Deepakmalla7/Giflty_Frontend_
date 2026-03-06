@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -12,11 +12,54 @@ export default function SettingsPage() {
     twoFactor: false,
   });
 
-  const handleToggle = (key: keyof typeof settings) => {
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stored = localStorage.getItem("theme") as
+      | "light"
+      | "dark"
+      | "system"
+      | null;
+
+    let isDark = false;
+    if (stored === "dark") {
+      isDark = true;
+    } else if (stored === "system" || stored === null) {
+      isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      darkMode: isDark,
     }));
+  }, []);
+
+  const applyTheme = (isDark: boolean) => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.classList.toggle("dark", isDark);
+    root.style.colorScheme = isDark ? "dark" : "light";
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  };
+
+  const handleToggle = (key: keyof typeof settings) => {
+    setSettings((prev) => {
+      const nextValue = !prev[key];
+
+      if (key === "darkMode") {
+        applyTheme(nextValue);
+      }
+
+      return {
+        ...prev,
+        [key]: nextValue,
+      };
+    });
   };
 
   const settingGroups = [

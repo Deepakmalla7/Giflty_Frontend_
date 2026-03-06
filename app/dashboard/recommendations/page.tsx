@@ -112,7 +112,7 @@ export default function RecommendationsPage() {
         {/* Empty State */}
         {!error && gifts.length === 0 && (
           <div className="rounded-lg bg-gray-50 border-2 border-dashed border-gray-300 p-12 text-center">
-            <p className="text-2xl mb-2">🎁</p>
+            <p className="text-2xl mb-2"></p>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               No gifts found
             </h3>
